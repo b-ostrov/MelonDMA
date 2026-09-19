@@ -1,7 +1,7 @@
 /*
  * MlxDoorbell.hpp — Doorbell mechanism (generic Mellanox mlx5 family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/include/linux/mlx5/doorbell.h
+ * Reference: Linux include/linux/mlx5/doorbell.h
  * and include/linux/mlx5/qp.h (DB record)
  */
 #ifndef MLX_DOORBELL_HPP

@@ -1,7 +1,7 @@
 /*
  * MlxQP.cpp — Queue Pair implementation (DriverKit port).
  *
- * Ported from: drivers/infiniband/hw/mlx5/qp.c (create_user_qp,
+ * Reference: Linux drivers/infiniband/hw/mlx5/qp.c (create_user_qp,
  * __mlx5_ib_modify_qp), trimmed to RC/UD. QPC encoding uses the portable
  * MlxP0Encoding.hpp encoders (host-tested in Tests/test_all.cpp).
  *
@@ -11,7 +11,7 @@
  * Firmware commands run via MlxPCIDriver::Exec → MlxCmd (mailbox chains).
  *
  * State machine: RST→INIT (RST2INIT 0x502) → INIT→RTR (INIT2RTR 0x503) →
- * RTR→RTS (RTR2RTS 0x504), per MLNX OFED 5.9 (verified opcodes, notes/19 §2.5).
+ * RTR→RTS (RTR2RTS 0x504), per Linux mlx5 5.9 (verified opcodes, notes/19 §2.5).
  */
 #include "MlxQP.hpp"
 #include "MlxRoCE.hpp"

@@ -362,7 +362,7 @@ another card, re-validating the standard capture on a SIP-on machine.
 ## 2026-09-08 — Apple DEXT parity: cache line, board id, UAR geometry
 
 Source: the decompiled `com.apple.DriverKit-AppleEthernetMLX5.dext` under
-`dev/donors/apple-rdma/`, cross-checked field by field against `mlx5_ifc.h` on the
+the local Apple reference, cross-checked field by field against `mlx5_ifc.h` on the
 Spark, then measured on the card at DEXT 0.482.
 
 **`cache_line_128byte` is now set.** Apple propagates this cap from the max caps in
@@ -998,7 +998,7 @@ timer tick.
 
 ## 2026-09-08 (Apple parity) — queue counters and identity GUIDs
 
-Two of the four facilities still unported from Apple's DEXT, both read-only, both in
+Two of the four facilities still missing vs Apple's DEXT, both read-only, both in
 one pass because they touch the same files.
 
 **Per-vport queue counters** (`vPortQueryQCounter`). Cheaper than the plan said: the
@@ -1144,17 +1144,17 @@ PCAM/MCAM/QCAM, and port and link management including PFC.
 
 ## 2026-09-08 (Apple parity) — the userspace provider read against the code
 
-Second donor: the decompilation of Apple's `libmlx5.dylib` data path in
-`dev/donors/apple-rdma/RDMA-BUFFER-PATH.md`. Its five actionable points had been copied
+Second reference: the decompilation of Apple's `libmlx5.dylib` data path in
+the local Apple reference `RDMA-BUFFER-PATH.md`. Its five actionable points had been copied
 into the analysis as open items. Checking them against the source closes three and
-opens two, plus two facilities the donor names in passing that MelonDMA does not have.
+opens two, plus two facilities the reference names in passing that MelonDMA does not have.
 
 **Closed, because they were already done.** The SQ doorbell record is published before
 the doorbell on both paths, in Apple's order and at Apple's offset: the shim stores the
 byte-swapped producer index to `db[1]` between two write barriers, and the DEXT does the
 same at every post site. MelonDMA carries one barrier more than Apple. The inline length
 unit matches too, `ds` being the low byte of `qpn_ds` in units of 16 bytes on both sides.
-The MR cache, which the donor calls a MelonDMA advantage rather than a parity gap,
+The MR cache, which the reference calls a MelonDMA advantage rather than a parity gap,
 landed earlier the same day.
 
 **Open, and both are correctness rather than performance.**
@@ -1187,7 +1187,7 @@ than diagnostics, and also the least certain on a ConnectX-4 Lx.
 
 ## 2026-09-08 (implementation) — post-path serialisation and the HCA clock
 
-Three of the four gaps the userspace-provider donor turned up are closed. The fourth is
+Three of the four gaps the userspace-provider reference turned up are closed. The fourth is
 deliberately left alone.
 
 **Posts on one queue pair are serialised.** Every public posting entry point now
@@ -1260,7 +1260,7 @@ write and read, and the queue counters still counting.
 **Scatter to CQE, not attempted.** `cs_req` and `cs_res` exist in the QPC, but what to
 write into them is internal to the kernel driver and to rdma-core's provider source,
 neither of which is on this bench; the installed `mlx5dv.h` does not carry the values and
-the Apple donor mentions the feature only in prose. Four rounds have already been lost in
+the Apple reference mentions the feature only in prose. Four rounds have already been lost in
 this project to values recalled instead of read, so no remembered constant is going into
 a QPC. The value is lower than it looks in any case: it is a responder-side optimisation,
 and the headline path here is one-sided RDMA WRITE, which produces no responder

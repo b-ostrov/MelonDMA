@@ -1,7 +1,7 @@
 /*
  * MlxFwPages.hpp — Firmware page management (generic Mellanox mlx5 family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/core/pagealloc.c
+ * Reference: Linux core/pagealloc.c
  *
  * DriverKit port: boot/init/runtime pages are provided to firmware via
  * MANAGE_PAGES. Each page descriptor is an IOBufferMemoryDescriptor pinned with

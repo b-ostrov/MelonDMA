@@ -1,7 +1,6 @@
 /*
  * MlxUserClient.iig — DriverKit user client (app ↔ DEXT boundary).
  *
- * PCIDriverKit port of AppleMCX's MlxUserClient (kext IOUserClient).
  * The selector table and POD ABI structs live in MlxUCIO.h (shared with
  * userspace). The kext used IOExternalMethodDispatch + OSArray/OSData ownership
  * tracking; the DEXT version uses IOUserClientMethodDispatch + the same

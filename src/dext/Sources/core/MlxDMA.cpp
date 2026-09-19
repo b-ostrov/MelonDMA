@@ -1,7 +1,7 @@
 /*
  * MlxDMA.cpp — DMA/IOMMU mapping (DriverKit port).
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9 core/alloc.c + dma mapping path.
+ * Reference: Linux mlx5 core/alloc.c + dma mapping path.
  *
  * DriverKit port: replaces the kernel IODMACommand factory with
  * IODMACommand::Create + PrepareForDMA. Client (app) memory arrives as an

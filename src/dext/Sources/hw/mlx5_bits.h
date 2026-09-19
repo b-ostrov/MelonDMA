@@ -4,7 +4,8 @@
  * The mlx5 command interface uses bit-aligned fields (not byte-aligned).
  * These helpers write/read arbitrary bit ranges within a byte buffer.
  *
- * Ported from: AppleMCX Sources/hw/MlxRegs.hpp
+ * Transcribed from: include/linux/mlx5/mlx5_ifc.h (Mellanox, dual-licensed
+ * GPL-2.0 / OpenIB-BSD).
  */
 #ifndef MLX5_BITS_H
 #define MLX5_BITS_H

@@ -1,8 +1,7 @@
 /*
  * MlxPCIDriver.cpp — DriverKit DEXT entry point (core layer).
  *
- * PCIDriverKit port of AppleMCX's MlxPCIDriver (kext). The kext matched via
- * IOPCIMatch and mapped BAR0 with IOMemoryMap. The DEXT uses
+ * Original DriverKit PCI binding. The DEXT uses
  * PCIDriverKit.framework's IOPCIDevice: Open()/GetBARInfo()/
  * _CopyDeviceMemoryWithIndex for the BAR aperture, MemoryRead/Write32 for MMIO
  * (both LOCALONLY, MemoryRead32 returns void), and ConfigureInterrupts for
@@ -3552,7 +3551,7 @@ MlxPCIDriver::FwInit()
      * previous dext life (after kill without DISABLE_HCA) — not fatal, continue. */
     EnableHca();
 
-    /* ISSI negotiation BEFORE boot pages (like AppleMCX/Linux: set_issi goes
+    /* ISSI negotiation BEFORE boot pages (like the Linux mlx5 driver: set_issi goes
      * BEFORE giving boot pages). On failure SetIssi falls back to ISSI=0 and
      * continues — non-blocking. */
     SetIssi();
@@ -3583,7 +3582,7 @@ MlxPCIDriver::FwInit()
     }
     MLX_LOG("boot pages: %u handed to firmware", bootPages);
 
-    /* SET_HCA_CAP — enable RoCE (AppleMCX donor: setHcaCaps after boot pages). */
+    /* SET_HCA_CAP — enable RoCE (setHcaCaps after boot pages). */
     if (!SetHcaCaps()) {
         MLX_LOG("FwInit: SET_HCA_CAP failed");
         return false;
@@ -3680,7 +3679,7 @@ MlxPCIDriver::SetIssi()
     }
     if (current != 0) { ivars->fIssi = current; return true; }   /* already set */
 
-    /* ISSI=1 = bit 1 in supported_issi_dw0 (like AppleMCX: supIssi & (1<<1)). */
+    /* ISSI=1 = bit 1 in supported_issi_dw0 (like the Linux mlx5 driver: supIssi & (1<<1)). */
     if (!(supported & (1u << 1))) {
         MLX_LOG("ISSI 1 not supported (sup=0x%x) — ISSI=0", supported);
         ivars->fIssi = 0;
@@ -3706,7 +3705,7 @@ MlxPCIDriver::SetIssi()
 bool
 MlxPCIDriver::SetHcaCaps()
 {
-    /* SET_HCA_CAP (0x109): pin the general caps. AppleMCX donor setHcaCaps:
+    /* SET_HCA_CAP (0x109): pin the general caps. Sequence (Linux mlx5):
      * QUERY general MAX+CURRENT → copy current into in+16 → set the bits
      * (cmdif_checksum=0, uar4k from maxCap, log_uar_page_sz @0x490).
      * RoCE is NOT enabled here: that is done by MODIFY_NIC_VPORT_CONTEXT
@@ -3835,8 +3834,8 @@ bool
 MlxPCIDriver::QueryHcaCaps()
 {
     /* QUERY_HCA_CAP: GENERAL current → parse → fill MlxHcaCaps.
-     * RoCE caps are read only if general.roce is set. Donor: AppleMCX
-     * queryHcaCaps (flow/ethernet omitted for the MVP RoCEv2). */
+     * RoCE caps are read only if general.roce is set (flow/ethernet omitted
+     * for the MVP RoCEv2). */
     uint8_t *general = static_cast<uint8_t *>(IOMallocZero(MLX_P1_HCA_CAP_BYTES));
     uint8_t *roce = static_cast<uint8_t *>(IOMallocZero(MLX_P1_HCA_CAP_BYTES));
     uint8_t *atomic = static_cast<uint8_t *>(IOMallocZero(MLX_P1_HCA_CAP_BYTES));

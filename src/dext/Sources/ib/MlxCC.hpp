@@ -1,7 +1,7 @@
 /*
  * MlxCC.hpp — DCQCN congestion control (generic Mellanox family)
  *
- * Ported from: drivers/infiniband/hw/mlx5/cong.c. The DCQCN loop runs in
+ * Reference: Linux drivers/infiniband/hw/mlx5/cong.c. The DCQCN loop runs in
  * firmware; the driver only wraps QUERY/MODIFY_CONG_PARAMS.
  */
 #ifndef MLX_CC_HPP

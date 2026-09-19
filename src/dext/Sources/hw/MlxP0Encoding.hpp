@@ -1,7 +1,7 @@
 /*
  * MlxP0Encoding.hpp - host-testable safety-critical mlx5 encoders
  *
- * Offsets are from MLNX OFED 5.9 mlx5_ifc.h and are expressed in bits.
+ * Offsets are from Linux mlx5 5.9 mlx5_ifc.h and are expressed in bits.
  */
 #ifndef MLX_P0_ENCODING_HPP
 #define MLX_P0_ENCODING_HPP
@@ -50,7 +50,7 @@ enum MlxMrAccessFlags {
 
 /* mlx5 QPC atomic_mode (0x48c) values: 0=NONE, 1=IB_COMP (standard 8-byte
  * RoCEv2 FETCH_ADD/CMP_SWAP), 3=8B (extended). Matches mlx5_ifc.h
- * MLX5_ATOMIC_MODE_*. The donor mlx5_ib falls back to IB_COMP when the card
+ * MLX5_ATOMIC_MODE_*. The Linux mlx5_ib falls back to IB_COMP when the card
  * lacks extended atomics (ConnectX-4 Lx). */
 #define MLX_ATOMIC_MODE_IB_COMP 1u
 #define MLX_ATOMIC_MODE_8B 3u

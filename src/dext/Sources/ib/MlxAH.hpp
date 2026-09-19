@@ -1,7 +1,7 @@
 /*
  * MlxAH.hpp — Address Handle (generic Mellanox family)
  *
- * Ported from: drivers/infiniband/hw/mlx5/ah.c. Pure encoding logic — the AV
+ * Reference: Linux drivers/infiniband/hw/mlx5/ah.c. Pure encoding logic — the AV
  * encoder is host-testable and portable. Storage adapted to DriverKit.
  */
 #ifndef MLX_AH_HPP

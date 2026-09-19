@@ -1,7 +1,7 @@
 /*
  * MlxRoCE.cpp — verbs protocol layer entry point (DriverKit port).
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/drivers/infiniband/hw/mlx5/main.c.
+ * Reference: Linux drivers/infiniband/hw/mlx5/main.c.
  * DriverKit port: MlxRoCE is a plain C++ object owned by MlxPCIDriver (not an
  * IOService nub — the kext published it for IORDMAFamily registration, which
  * is unavailable on macOS, notes/22-*). The DEXT exposes verbs directly

@@ -1,8 +1,8 @@
 /*
  * MlxWQE.hpp — WQE/CQE/AV hardware structures (generic Mellanox mlx5 family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/include/linux/mlx5/qp.h
- *              kernel_src/mlnx-ofed-kernel-5.9/include/linux/mlx5/device.h
+ * Reference: Linux include/linux/mlx5/qp.h
+ *              Linux include/linux/mlx5/device.h
  * The layouts are hard-imposed by hardware, consistent across the whole family,
  * and must not be changed. Use static_assert to validate sizes.
  */

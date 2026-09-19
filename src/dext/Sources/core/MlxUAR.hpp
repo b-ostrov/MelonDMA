@@ -1,7 +1,7 @@
 /*
  * MlxUAR.hpp — UAR (User Access Region) management (generic Mellanox family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/core/uar.c
+ * Reference: Linux core/uar.c
  *
  * DriverKit port: the BAR aperture that contains UAR/BF is obtained via
  * IOPCIDevice::_CopyDeviceMemoryWithIndex. Per-client UAR subranges are carved

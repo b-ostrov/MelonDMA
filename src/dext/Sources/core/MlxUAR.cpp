@@ -1,7 +1,7 @@
 /*
  * MlxUAR.cpp — UAR (User Access Region) management (DriverKit port).
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/core/uar.c. The BAR aperture
+ * Reference: Linux core/uar.c. The BAR aperture
  * containing UAR/BF is obtained via IOPCIDevice::_CopyDeviceMemoryWithIndex.
  * Per-client UAR subranges are carved with IOMemoryDescriptor::
  * CreateSubMemoryDescriptor and handed to the app via CopyClientMemoryForType

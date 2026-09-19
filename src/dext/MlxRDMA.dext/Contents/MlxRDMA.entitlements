@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <!--
-      Entitlements for MlxRDMA.dext (PCIDriverKit port of AppleMCX).
+      Entitlements for MlxRDMA.dext (DriverKit PCI extension).
       These are requested via the Apple Developer entitlement request form at
       https://developer.apple.com/contact/request-entitlements/ and are NOT
       granted automatically by the paid Apple Developer Program membership.

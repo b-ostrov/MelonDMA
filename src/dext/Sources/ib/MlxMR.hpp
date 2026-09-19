@@ -1,7 +1,7 @@
 /*
  * MlxMR.hpp — Memory Registration (generic Mellanox family)
  *
- * Ported from: drivers/infiniband/hw/mlx5/mr.c (trimmed: reg_user_mr/dereg).
+ * Reference: Linux drivers/infiniband/hw/mlx5/mr.c (trimmed: reg_user_mr/dereg).
  *
  * DriverKit port: client memory is pinned via MlxDMA::Pin
  * (CreateMemoryDescriptorFromClient → IODMACommand::PrepareForDMA). The PBL is

@@ -1,7 +1,7 @@
 /*
  * MlxRegs.hpp — Hardware register layouts (generic Mellanox mlx5 family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/include/linux/mlx5/device.h
+ * Reference: Linux include/linux/mlx5/device.h
  * These layouts are hard-imposed by hardware, consistent across
  * ConnectX-4 ~ ConnectX-8, and must not be changed.
  *

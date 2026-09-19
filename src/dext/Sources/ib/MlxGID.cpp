@@ -1,7 +1,7 @@
 /*
  * MlxGID.cpp — GID table management (DriverKit port).
  *
- * Ported from: drivers/infiniband/hw/mlx5/main.c:577 (set_roce_addr). The GID
+ * Reference: Linux drivers/infiniband/hw/mlx5/main.c:577 (set_roce_addr). The GID
  * table is written to firmware via SET_ROCE_ADDRESS (0x761). macOS does not
  * expose kernel networking hooks to a DEXT, so IP/MAC changes arrive from a
  * userspace policy daemon through an ExternalMethod.

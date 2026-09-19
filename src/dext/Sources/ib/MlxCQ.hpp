@@ -1,7 +1,7 @@
 /*
  * MlxCQ.hpp — Completion Queue (generic Mellanox family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/drivers/infiniband/hw/mlx5/cq.c
+ * Reference: Linux drivers/infiniband/hw/mlx5/cq.c
  *
  * DriverKit port: CQE buffer is DEXT-owned and pinned with IODMACommand.
  * Firmware writes CQEs via DMA; polling and consumer DB updates remain

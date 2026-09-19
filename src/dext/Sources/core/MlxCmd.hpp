@@ -1,7 +1,7 @@
 /*
  * MlxCmd.hpp — Firmware command interface (generic Mellanox mlx5 family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/drivers/net/ethernet/mellanox/mlx5/core/cmd.c
+ * Reference: Linux drivers/net/ethernet/mellanox/mlx5/core/cmd.c
  *
  * DriverKit port: the command queue is allocated via IOBufferMemoryDescriptor
  * and pinned with IODMACommand::PrepareForDMA. The HCA doorbell is rung via

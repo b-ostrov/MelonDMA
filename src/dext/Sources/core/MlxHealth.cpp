@@ -1,7 +1,7 @@
 /*
  * MlxHealth.cpp — Firmware health monitoring (DriverKit port).
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/core/health.c. The health
+ * Reference: Linux core/health.c. The health
  * timer uses IOTimerDispatchSource. The init-segment health buffer is read
  * via MMIO on BAR0 (IOPCIDevice::MemoryRead32). Fatal health state enters DMA
  * quarantine.

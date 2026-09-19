@@ -1,7 +1,7 @@
 /*
  * MlxMR.cpp — Memory Registration (DriverKit port).
  *
- * Ported from: drivers/infiniband/hw/mlx5/mr.c (reg_user_mr/dereg). The PBL
+ * Reference: Linux drivers/infiniband/hw/mlx5/mr.c (reg_user_mr/dereg). The PBL
  * is built by splitting IOVA segments into 4 KiB HCA PAS via MlxDMA::Pin +
  * mlxAppendMttPages, then encoded with mlxEncodeCreateMkey (host-tested). The
  * lkey/rkey are composed as (mkey_index << 8) | key_variant.

@@ -1,7 +1,7 @@
 /*
  * MlxEQ.hpp — Event Queue (generic Mellanox mlx5 family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/core/eq.c
+ * Reference: Linux core/eq.c
  *
  * DriverKit port: MSI-X vectors come from
  * IOPCIDevice::ConfigureInterrupts(kIOInterruptTypePCIMessagedX, …). Event

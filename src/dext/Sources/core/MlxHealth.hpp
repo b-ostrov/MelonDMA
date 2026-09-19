@@ -1,7 +1,7 @@
 /*
  * MlxHealth.hpp — Firmware health monitoring (generic Mellanox mlx5 family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/core/health.c
+ * Reference: Linux core/health.c
  *
  * DriverKit port: the health timer uses IOTimerDispatchSource instead of
  * IOTimerEventSource. The init-segment health buffer is read via MMIO on BAR0

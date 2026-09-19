@@ -1,11 +1,11 @@
 /*
  * MlxCC.cpp — DCQCN congestion control (DriverKit port).
  *
- * Ported from: drivers/infiniband/hw/mlx5/cong.c. The DCQCN loop runs in
+ * Reference: Linux drivers/infiniband/hw/mlx5/cong.c. The DCQCN loop runs in
  * firmware; the driver wraps QUERY_CONG_PARAMS (0x824) / MODIFY_CONG_PARAMS
  * (0x825) and stores the reaction-point parameters.
  *
- * Register layout is taken from donors/rxe-reference/mlx5_ifc.h:
+ * Register layout is taken from mlx5_ifc.h:
  *   modify_cong_params_in:  opcode@0x0, op_mod@0x30, cong_protocol@0x5c,
  *                           field_select@0x60, congestion_parameters@0x100
  *   query_cong_params_out:  status@0x0, syndrome@0x20, congestion_parameters@0x80
@@ -29,7 +29,7 @@
 #define MLX_LOG(fmt, ...)  IOLog("MlxCC: " fmt "\n", ##__VA_ARGS__)
 #define MLX_DBG(fmt, ...)  MLX_DBGLOG("MlxCC: " fmt, ##__VA_ARGS__)
 
-/* mlx5_ifc bit offsets (donors/rxe-reference/mlx5_ifc.h). */
+/* mlx5_ifc bit offsets. */
 enum {
     MLX_CC_PROTOCOL_ROCE_ECN_RP = 0x1,   /* RoCEv2 ECN reaction point (DCQCN) */
     MLX_CC_QUERY_CTX_BIT        = 0x80,  /* query_cong_params_out.congestion_parameters */
@@ -78,7 +78,7 @@ MlxCC::Init(MlxRoCE *roce, MlxPCIDriver *core)
     s->core = core;
     s->lock = IOLockAlloc();
     if (!s->lock) { delete s; s = NULL; return kIOReturnNoMemory; }
-    /* DCQCN defaults (AppleMCX README): rpg_min_dec_fac=256, rpg_ai_rate=5,
+    /* DCQCN defaults: rpg_min_dec_fac=256, rpg_ai_rate=5,
      * rpg_time_reset=55, rpg_threshold=150. */
     s->params.rpgMinDecFac = 256;
     s->params.rpgAiRate = 5;

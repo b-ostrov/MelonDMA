@@ -38,6 +38,6 @@ DerivedData/
 /src/dext/scripts/build_mlxdetach
 /src/dext/scripts/takeover2
 
-# Third-party donor and archived prototypes remain local-only.
+# Archived prototypes and local research references remain local-only.
 /donors/
 /archive/

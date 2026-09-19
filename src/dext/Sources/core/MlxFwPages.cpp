@@ -1,7 +1,7 @@
 /*
  * MlxFwPages.cpp — Firmware page management (DriverKit port).
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/core/pagealloc.c. Boot/init/
+ * Reference: Linux core/pagealloc.c. Boot/init/
  * runtime pages are provided to firmware via MANAGE_PAGES. Each page
  * descriptor is an IOBufferMemoryDescriptor (4 KiB) pinned with
  * IODMACommand; the IOVA goes into the command. Firmware-owned pages retain

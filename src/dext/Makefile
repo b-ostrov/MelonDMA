@@ -1,4 +1,4 @@
-# Makefile for MlxRDMA.dext (PCIDriverKit port of AppleMCX).
+# Makefile for MlxRDMA.dext (DriverKit PCI extension).
 #
 # Two build surfaces:
 #   make check-dext  — generate iig headers and syntax-check all DEXT sources

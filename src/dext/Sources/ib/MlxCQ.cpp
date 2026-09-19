@@ -1,7 +1,7 @@
 /*
  * MlxCQ.cpp — Completion Queue (DriverKit port).
  *
- * Ported from: drivers/infiniband/hw/mlx5/cq.c, trimmed to create/destroy +
+ * Reference: Linux drivers/infiniband/hw/mlx5/cq.c, trimmed to create/destroy +
  * kernel-mediated poll_cq. The CQE buffer is a DEXT-owned
  * IOBufferMemoryDescriptor pinned with IODMACommand; firmware writes CQEs
  * via DMA and the DEXT owns the consumer-index DB record.
@@ -157,7 +157,7 @@ MlxCQ::UnlockCq(MlxCQContext *cq)
 kern_return_t
 MlxCQ::CmdCreateCQ(MlxCQContext *cq, uint32_t eqNumber)
 {
-    /* mlx5_ifc create_cq_in: CQC at bit 0x80, PAS at bit 0x880 (AppleMCX donor). */
+    /* mlx5_ifc create_cq_in: CQC at bit 0x80, PAS at bit 0x880. */
     uint8_t in[4096] = {};
     uint8_t out[64] = {};
     uint32_t cqcOff = 0x80 / 8;
@@ -174,7 +174,7 @@ MlxCQ::CmdCreateCQ(MlxCQContext *cq, uint32_t eqNumber)
         s->core->GetUAR()->ClientUarIndex(cq->clientBundle, 0) :
         (s->core->GetUAR() ? s->core->GetUAR()->GetBootUarIndex() : 0);
     mlxSetBits(cqc, 0x68, 24, uarPage);
-    /* c_eqn — 8 bits @0xb8 (AppleMCX), NOT 0xa0/32bit. The real EQ number. */
+    /* c_eqn — 8 bits @0xb8 (mlx5_ifc.h), NOT 0xa0/32bit. The real EQ number. */
     mlxSetBits(cqc, 0xb8, 8, eqNumber);
     mlxSetBits(cqc, 0xc3, 5, 0);    /* 4 KiB pages */
     uint64_t dbDma = 0;

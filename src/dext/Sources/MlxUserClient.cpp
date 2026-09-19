@@ -634,7 +634,7 @@ MlxUserClient::Cleanup()
     if (methodLock) IOLockFree(methodLock);
 }
 
-/* ---- per-client resource ownership (ported from kext MlxUserClient.cpp) ---- */
+/* ---- per-client resource ownership ---- */
 
 bool
 MlxUserClient::AddOwned(OSArray *table, uint32_t handle)

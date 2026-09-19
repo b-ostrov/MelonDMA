@@ -20,7 +20,7 @@
  * RDMA_RX_DEPTH=24 x RDMA_CHUNK=256KiB) — without raising this driver's
  * command-mailbox size at all.
  *
- * Offsets follow the same MLNX OFED 5.9 mlx5_ifc.h this driver already
+ * Offsets follow the same Linux mlx5 5.9 mlx5_ifc.h this driver already
  * cites in MlxP0Encoding.hpp. access_mode=2 (KLM) is
  * MLX5_MKC_ACCESS_MODE_KLMS; each KLM entry is a 16-byte
  * {byte_count:32, mkey:32, address:64} triple (mlx5_ifc_klm_bits) — twice

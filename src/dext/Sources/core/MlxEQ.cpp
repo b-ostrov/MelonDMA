@@ -1,9 +1,8 @@
 /*
  * MlxEQ.cpp — Event Queue (DriverKit port).
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/core/eq.c, trimmed for DEXT.
- * CREATE_EQ encoding matches AppleMCX donor byte-for-byte (notes/35,
- * donors/applemcx/Sources/core/MlxEQ.cpp).
+ * Reference: Linux core/eq.c, trimmed for DEXT.
+ * CREATE_EQ encoding follows mlx5_ifc.h (notes/35).
  *
  * MVP: polling-driven dispatch (no MSI-X yet — intr=vector, poll the ring).
  * EQE is 64 bytes (mlx5_ifc_eqe_bits): event_type@byte1, event_sub_type@byte3,
@@ -199,7 +198,7 @@ MlxEQ::CreateEQ(uint32_t *eqn)
 {
     if (!s || !eqn) return kIOReturnBadArgument;
 
-    /* CREATE_EQ IFC (AppleMCX donor): EQC@0x80, event mask@0x2c0, PAS@0x880. */
+    /* CREATE_EQ IFC (mlx5_ifc.h): EQC@0x80, event mask@0x2c0, PAS@0x880. */
     uint8_t in[4096] = {};
     uint8_t out[64] = {};
     const uint32_t eqcOff   = 0x80 / 8;    /* 16 */

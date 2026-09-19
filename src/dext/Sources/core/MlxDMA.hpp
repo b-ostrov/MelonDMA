@@ -1,7 +1,7 @@
 /*
  * MlxDMA.hpp — DMA/IOMMU mapping (generic Mellanox mlx5 family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9 core/alloc.c + dma mapping path.
+ * Reference: Linux mlx5 core/alloc.c + dma mapping path.
  *
  * DriverKit port: replaces kernel IODMACommand factory with
  * IODMACommand::Create + PrepareForDMA on the client (app) memory descriptor

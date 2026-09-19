@@ -1,7 +1,7 @@
 /*
  * MlxCmd.cpp — Firmware command interface (DriverKit port).
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9 core/cmd.c, trimmed for DEXT.
+ * Reference: Linux mlx5 core/cmd.c, trimmed for DEXT.
  *
  * Command flow (cmd.c:969-1056 mlx5_cmd_work_handler + cmd.c:237 poll):
  *   1. Command header (first 16B: opcode/op_mod/...) goes into MlxCmdLayout.in.
@@ -16,7 +16,7 @@
  *   7. Double success gate: descriptor delivery status (bits [7:1]) AND
  *      firmware outbox status (REMEDIATION_PLAN §5.1, mlxP1ParseOutbox).
  *
- * MVP: single command slot (slot 0), polling completion. The kext donor's
+ * MVP: single command slot (slot 0), polling completion. A
  * 32-slot bitmap + event-mode completion is a later optimization.
  *
  * References: notes/08 (firmware command reference), notes/11 §2 (DriverKit
@@ -565,7 +565,7 @@ MlxCmd::ExecOnSlot(uint32_t slot, uint32_t opcode, const void *in,
             memset(mb->data + dataLen, 0, MLX_CMD_DATA_BLOCK_SIZE - dataLen);
         mb->next      = OSSwapHostToBigInt64(
             (i + 1 < sl->in.blocks) ? sl->in.iova[i + 1] : 0);
-        mb->block_num = OSSwapHostToBigInt32(i);   /* big-endian order (AppleMCX) */
+        mb->block_num = OSSwapHostToBigInt32(i);   /* big-endian order */
         mb->token     = sl->token;
         SetMailboxSignature(mb);
     }
@@ -580,7 +580,7 @@ MlxCmd::ExecOnSlot(uint32_t slot, uint32_t opcode, const void *in,
         memset(mb->data, 0, MLX_CMD_DATA_BLOCK_SIZE);
         mb->next      = OSSwapHostToBigInt64(
             (i + 1 < sl->out.blocks) ? sl->out.iova[i + 1] : 0);
-        mb->block_num = OSSwapHostToBigInt32(i);   /* big-endian order (AppleMCX) */
+        mb->block_num = OSSwapHostToBigInt32(i);   /* big-endian order */
         mb->token     = sl->token;
         SetMailboxSignature(mb);
     }

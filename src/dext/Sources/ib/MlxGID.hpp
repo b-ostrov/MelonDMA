@@ -1,7 +1,7 @@
 /*
  * MlxGID.hpp — GID table management (generic Mellanox family)
  *
- * Ported from: drivers/infiniband/hw/mlx5/main.c:577 (set_roce_addr).
+ * Reference: Linux drivers/infiniband/hw/mlx5/main.c:577 (set_roce_addr).
  *
  * DriverKit port: the GID table is written to firmware via SET_ROCE_ADDRESS.
  * IP/MAC changes arrive from a userspace policy daemon (no kernel net hooks).

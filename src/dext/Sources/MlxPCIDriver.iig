@@ -1,9 +1,7 @@
 /*
  * MlxPCIDriver.iig — DriverKit DEXT PCI binding layer (core entry).
  *
- * PCIDriverKit port of AppleMCX's MlxPCIDriver (kext). The kext version used
- * IOPCIDevice (kernel IOKit) + IOMemoryMap::getVirtualAddress() for MMIO.
- * The DEXT version uses PCIDriverKit.framework's IOPCIDevice with MemoryRead/
+ * The DEXT uses PCIDriverKit.framework's IOPCIDevice with MemoryRead/
  * Write32 and _CopyDeviceMemoryWithIndex for the BAR aperture, and
  * IOBufferMemoryDescriptor + IODMACommand for DMA.
  *

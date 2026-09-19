@@ -1,7 +1,7 @@
 /*
  * MlxAH.cpp — Address Handle (DriverKit port).
  *
- * Ported from: drivers/infiniband/hw/mlx5/ah.c. Pure encoding logic: the AV
+ * Reference: Linux drivers/infiniband/hw/mlx5/ah.c. Pure encoding logic: the AV
  * encoder is host-testable and portable. Only the storage is adapted to
  * DriverKit (fixed-capacity array, no OSObject).
  */

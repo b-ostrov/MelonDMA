@@ -1,7 +1,7 @@
 /*
  * MlxQP.hpp — Queue Pair management (generic Mellanox family)
  *
- * Ported from: kernel_src/mlnx-ofed-kernel-5.9/drivers/infiniband/hw/mlx5/qp.c
+ * Reference: Linux drivers/infiniband/hw/mlx5/qp.c
  * Trimmed: RC/UD types only, supporting RDMA WRITE/READ/SEND + UD datagram.
  *
  * DriverKit port: SQ/RQ buffers are DEXT-owned IOBufferMemoryDescriptor pinned
