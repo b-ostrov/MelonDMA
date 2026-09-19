@@ -302,11 +302,7 @@ zero-copy) is in `docs/inference-client-guide.md`.
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE). MelonDMA is an original implementation
-built from public protocol and hardware documentation (the Mellanox Adapters
-PRM, the InfiniBand Architecture specification, and the Linux mlx5 driver as a
-behavioural reference). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-for the full provenance and what is deliberately kept out of the repository.
+Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 
