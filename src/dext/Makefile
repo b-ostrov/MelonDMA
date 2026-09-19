@@ -51,11 +51,12 @@ VERBS_HDR  := usermode/libibverbs_compat/include/infiniband/verbs.h
 
 UTILS := build/mlx_probe build/mlx_irq_probe build/mlx_perf_test \
          build/mlx_datapath_bench build/mlx_rtt_bench build/mlx_blocking_rtt \
-         build/mlx_qp_scale build/mlx_port_counters build/mlx_gate_report
+         build/mlx_qp_scale build/mlx_port_counters build/mlx_gate_report \
+         build/mlx_mrrs build/mlx_lat
 
 .PHONY: all check-dext check-plist check-iig dext sign app shim verbs-compat \
         clean probe utils datapath-bench rtt-bench blocking-rtt qp-scale \
-        port-counters gate-report irq-probe perf-test \
+        port-counters gate-report irq-probe perf-test mrrs lat \
         production-preflight production-package
 
 all: check-dext shim verbs-compat utils
@@ -343,6 +344,32 @@ build/mlx_gate_report: tools/mlx_gate_report.c build/librdma_shim.dylib tools/di
 
 gate-report: build/mlx_gate_report
 	@echo "=== built unified gate report: $< ==="
+
+# PCIe Max Read Request Size readback / override (diagnostic entitlement).
+build/mlx_mrrs: tools/mlx_mrrs.c Sources/userclient/MlxUCIO.h \
+               Sources/userclient/MlxServiceMatch.h tools/diagnostic.entitlements | build
+	clang -std=c11 -Wall -Wextra -Werror -g -O2 \
+	    -isysroot $$(xcrun --sdk macosx --show-sdk-path) -arch arm64 \
+	    -I Sources/userclient -framework IOKit -framework CoreFoundation \
+	    tools/mlx_mrrs.c -o $@
+	codesign --force --options runtime --timestamp=none --sign "$(SIGN_ID)" \
+	    --entitlements tools/diagnostic.entitlements $@
+
+mrrs: build/mlx_mrrs
+	@echo "=== built MRRS control tool: $< ==="
+
+# Two-machine WRITE/READ latency (perftest method), Mac + Linux peer.
+build/mlx_lat: tools/mlx_lat.c build/libibverbs.dylib tools/reinit.entitlements | build
+	clang -std=gnu11 -Wall -Wextra -Werror -g -O2 \
+	    -isysroot $$(xcrun --sdk macosx --show-sdk-path) -arch arm64 \
+	    -I usermode/libibverbs_compat/include -L build -libverbs \
+	    -rpath $(CURDIR)/build -framework IOKit -framework CoreFoundation \
+	    tools/mlx_lat.c -o $@
+	codesign --force --options runtime --timestamp=none --sign "$(SIGN_ID)" \
+	    --entitlements tools/reinit.entitlements $@
+
+lat: build/mlx_lat
+	@echo "=== built two-machine latency tool: $< ==="
 
 clean:
 	rm -rf build

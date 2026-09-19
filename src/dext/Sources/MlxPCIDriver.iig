@@ -137,6 +137,9 @@ public:
     void            GetPcieLink(uint32_t *speed, uint32_t *width) LOCALONLY;
     /* Writes one MSI-X table entry, or flips only its mask bit. */
     kern_return_t   ProgramMsix(struct mlx_program_msix_req *req) LOCALONLY;
+    /* Reads Device Capabilities/Control; optionally sets Max Read Request
+     * Size and keeps it across function resets. */
+    kern_return_t   PcieDevCtl(struct mlx_pcie_devctl_req *req) LOCALONLY;
     /* Asks firmware for an EQ's own state; see mlx_query_eq_resp. */
     kern_return_t   QueryEqState(const struct mlx_query_eq_req *req,
                                  struct mlx_query_eq_resp *resp) LOCALONLY;

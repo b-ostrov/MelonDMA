@@ -785,6 +785,9 @@ static const MlxMethodSpec sMlxMethods[] = {
     MLX_UC_METHOD(kMlxUCMethodModifySrq, sizeof(struct mlx_modify_srq_req), 0),
     MLX_UC_METHOD(kMlxUCMethodQpLastRefusal, sizeof(uint32_t),
                   sizeof(struct mlx_qp_refusal_resp)),
+    MLX_UC_METHOD(kMlxUCMethodPcieDevCtl,
+                  sizeof(struct mlx_pcie_devctl_req),
+                  sizeof(struct mlx_pcie_devctl_req)),
     MLX_UC_METHOD(kMlxUCMethodQueryAbi, 0,
                   sizeof(struct mlx_query_abi_resp)),
     MLX_UC_METHOD(kMlxUCMethodQueryLimits, 0,
@@ -933,6 +936,7 @@ MlxUserClient::ExternalMethod(uint64_t selector,
          selector == kMlxUCMethodFwCmd || selector == kMlxUCMethodAccessReg ||
          selector == kMlxUCMethodQueryMsixState ||
          selector == kMlxUCMethodProgramMsix ||
+         selector == kMlxUCMethodPcieDevCtl ||
          selector == kMlxUCMethodQueryEqState ||
          selector == kMlxUCMethodProbeRmpLayout ||
          selector == kMlxUCMethodSetEqTimerPaused))
@@ -1281,6 +1285,14 @@ MlxUserClient::ExternalMethod(uint64_t selector,
         uint32_t paused = *(const uint32_t *)in;
         if (paused > 1) return kIOReturnBadArgument;
         return ivars->fCore->SetEqTimerPaused(paused != 0);
+    }
+    case kMlxUCMethodPcieDevCtl: {
+        if (!in || !out) return kIOReturnBadArgument;
+        if (!ivars->fCore) return kIOReturnNotAttached;
+        struct mlx_pcie_devctl_req raw = *(const struct mlx_pcie_devctl_req *)in;
+        kern_return_t dkr = ivars->fCore->PcieDevCtl(&raw);
+        *(struct mlx_pcie_devctl_req *)out = raw;
+        return dkr;
     }
     case kMlxUCMethodProgramMsix: {
         if (!in || !out) return kIOReturnBadArgument;

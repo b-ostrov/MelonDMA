@@ -36,7 +36,8 @@ struct MlxIBAddr {
  * Hardware capability summary — key fields returned by QUERY_HCA_CAP
  */
 struct MlxHcaCaps {
-    uint32_t fwRev;
+    /* major << 32 | minor << 16 | subminor, as mlx5_ib reports fw_ver */
+    uint64_t fwRev;
     uint16_t cmdifRev;
     uint8_t  portType;
     uint32_t numPorts;

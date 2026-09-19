@@ -19,13 +19,13 @@
 	<key>CFBundlePackageType</key>
 	<string>DEXT</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.547</string>
+	<string>0.550</string>
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>DriverKit</string>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>0.547</string>
+	<string>0.550</string>
 	<key>IOKitPersonalities</key>
 	<dict>
 		<key>MlxPCIDriver</key>

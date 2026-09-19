@@ -163,6 +163,11 @@ MlxRetainQuarantinedDummy(IOMemoryDescriptor *mem, IODMACommand *dma, IOPCIDevic
 /* ---- instance state (private; typed via MlxPCIDriver_DECLARE_IVARS) ---- */
 struct MlxPCIDriver_IVars {
     IOPCIDevice         *fPci;
+    /* Max Read Request Size override (bytes, 0 = leave macOS's value) and the
+     * Device Control word found before the driver first touched it. */
+    uint32_t             fMrrsOverride;
+    uint16_t             fDevCtlAtStart;
+    bool                 fDevCtlSaved;
     IOMemoryDescriptor  *fBar0Mem;
     uint8_t              fBar0Index;
     uint16_t             fDeviceId;
@@ -1300,6 +1305,80 @@ MlxPCIDriver::GetPcieLink(uint32_t *speed, uint32_t *width)
         }
         ptr = (uint8_t)(idNext >> 8);
     }
+}
+
+/* Offset of the PCI Express capability, 0 when the list cannot be walked. */
+static uint8_t
+FindPcieCap(IOPCIDevice *pci)
+{
+    uint16_t status = 0;
+    pci->ConfigurationRead16(0x06, &status);
+    if (!(status & 0x0010)) return 0;
+    uint8_t ptr = 0;
+    pci->ConfigurationRead8(0x34, &ptr);
+    for (uint32_t guard = 0; ptr >= 0x40 && guard < 48; guard++) {
+        uint16_t idNext = 0;
+        pci->ConfigurationRead16(ptr, &idNext);
+        if ((idNext & 0xff) == 0x10) return ptr;
+        ptr = (uint8_t)(idNext >> 8);
+    }
+    return 0;
+}
+
+/* Device Control (PCIe base spec, cap + 0x08): bits 14:12 Max Read Request
+ * Size and bits 7:5 Max Payload Size, both encoded as 128 << n. Device
+ * Capabilities (cap + 0x04) bits 2:0 give the largest payload supported. Only
+ * the MRRS field is ever written; payload size must match the whole path and
+ * belongs to the host. A function reset brings the register back to what
+ * IOPCIFamily saved, so the override is re-applied afterwards. */
+static void
+ApplyMrrs(IOPCIDevice *pci, uint8_t cap, uint32_t bytes)
+{
+    uint16_t code = 0;
+    while ((128u << code) < bytes && code < 5) code++;
+    uint16_t ctl = 0;
+    pci->ConfigurationRead16((uint64_t)cap + 0x08, &ctl);
+    ctl = (uint16_t)((ctl & ~0x7000u) | (code << 12));
+    pci->ConfigurationWrite16((uint64_t)cap + 0x08, ctl);
+}
+
+kern_return_t
+MlxPCIDriver::PcieDevCtl(struct mlx_pcie_devctl_req *req)
+{
+    if (!req || !ivars || !ivars->fPci) return kIOReturnBadArgument;
+    if (req->op > MLX_PCIE_DEVCTL_RESTORE) return kIOReturnBadArgument;
+    uint8_t cap = FindPcieCap(ivars->fPci);
+    if (!cap) return kIOReturnNotFound;
+    if (!ivars->fDevCtlSaved) {
+        ivars->fPci->ConfigurationRead16((uint64_t)cap + 0x08, &ivars->fDevCtlAtStart);
+        ivars->fDevCtlSaved = true;
+    }
+    if (req->op == MLX_PCIE_DEVCTL_SET_MRRS) {
+        uint32_t b = req->mrrsBytes;
+        if (b < 128 || b > 4096 || (b & (b - 1))) return kIOReturnBadArgument;
+        ApplyMrrs(ivars->fPci, cap, b);
+        ivars->fMrrsOverride = b;
+        MLX_LOG("PcieDevCtl: MRRS set to %u", b);
+    } else if (req->op == MLX_PCIE_DEVCTL_RESTORE) {
+        uint16_t ctl = 0;
+        ivars->fPci->ConfigurationRead16((uint64_t)cap + 0x08, &ctl);
+        ctl = (uint16_t)((ctl & ~0x7000u) | (ivars->fDevCtlAtStart & 0x7000u));
+        ivars->fPci->ConfigurationWrite16((uint64_t)cap + 0x08, ctl);
+        ivars->fMrrsOverride = 0;
+        MLX_LOG("PcieDevCtl: MRRS restored");
+    }
+    uint32_t devCap = 0;
+    uint16_t ctl = 0;
+    ivars->fPci->ConfigurationRead32((uint64_t)cap + 0x04, &devCap);
+    ivars->fPci->ConfigurationRead16((uint64_t)cap + 0x08, &ctl);
+    req->devCap = devCap;
+    req->devCtl = ctl;
+    req->devCtlAtStart = ivars->fDevCtlAtStart;
+    req->mrrsNow = 128u << ((ctl >> 12) & 7);
+    req->mpsNow = 128u << ((ctl >> 5) & 7);
+    req->mpsSupported = 128u << (devCap & 7);
+    req->mrrsOverride = ivars->fMrrsOverride;
+    return kIOReturnSuccess;
 }
 
 /* Reads the MSI-X capability out of config space and the head of the table
@@ -3142,6 +3221,13 @@ MlxPCIDriver::PerformFlr()
     __atomic_store_n(&ivars->fQuarantineBytes, 0, __ATOMIC_RELAXED);
     __atomic_store_n(&ivars->fQuarantineObjects, 0, __ATOMIC_RELAXED);
     __atomic_store_n(&ivars->fBmeFenced, false, __ATOMIC_RELEASE);
+    if (ivars->fMrrsOverride) {
+        uint8_t cap = FindPcieCap(ivars->fPci);
+        if (cap) {
+            ApplyMrrs(ivars->fPci, cap, ivars->fMrrsOverride);
+            MLX_LOG("PerformFlr: MRRS override %u re-applied", ivars->fMrrsOverride);
+        }
+    }
     return true;
 }
 
@@ -3903,6 +3989,30 @@ MlxPCIDriver::QueryHcaCaps()
         caps.ibSupported = caps.portType == MLX_PORT_TYPE_IB;
         caps.ibMaxPkeys = static_cast<uint16_t>(
             mlxP1PkeyTableSize(parsed.pkeyTableEncoding));
+        /* Firmware version and PCI identity for QUERY_DEVICE. Both used to
+         * reach clients as zero: the memset above cleared fwRev and nothing
+         * set it again, and the vendor block was only ever filled by
+         * MlxHCAConnectX4::LoadCaps, which nothing calls. A client that checks
+         * the part (Ash Hart's verbs_peer, ibv_devinfo) saw a device of part 0.
+         * The initialization segment layout is Linux's mlx5_init_seg: fw_rev
+         * holds minor in its high half and major in its low half, and
+         * cmdif_rev_fw_sub the subminor in its low half. */
+        uint32_t rev = 0, sub = 0;
+        ivars->fPci->MemoryRead32(ivars->fBar0Index, 0x00, &rev);
+        ivars->fPci->MemoryRead32(ivars->fBar0Index, 0x04, &sub);
+        rev = OSSwapBigToHostInt32(rev);
+        sub = OSSwapBigToHostInt32(sub);
+        caps.fwRev = ((uint64_t)(rev & 0xffffu) << 32) |
+                     ((uint64_t)(rev >> 16) << 16) | (sub & 0xffffu);
+        MlxVendorInfo &vendor = ivars->fHCA->MutableVendor();
+        uint8_t revisionId = 0;
+        ivars->fPci->ConfigurationRead8(0x08, &revisionId);
+        vendor.vendorId = 0x15b3;
+        vendor.deviceId = ivars->fDeviceId;
+        vendor.revision = revisionId;
+        MLX_LOG("QUERY_HCA_CAP: fw %u.%u.%04u device 0x%04x rev 0x%02x",
+                rev & 0xffffu, rev >> 16, sub & 0xffffu,
+                ivars->fDeviceId, revisionId);
     }
     MLX_LOG("QUERY_HCA_CAP: logMaxQp=%u logMaxCq=%u logMaxMkey=%u logMaxMsg=%u logMaxSrqSz=%u logPgSz=%u portType=%u numPorts=%u roce=%u uar4k=%u logUarPageSz=%u uarPageSize=%u cacheLine128=%u bf=%u logBfRegSize=%u gidTable=%u roceVersions=0x%x udpDst=%u udpSrcMin=%u atomicOps=0x%x atomicSizeQp=0x%x atomicMode=%u",
             parsed.logMaxQp, parsed.logMaxCq, parsed.logMaxMkey,

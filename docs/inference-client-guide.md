@@ -290,3 +290,85 @@ but the deployment owner must close them before shipping an application to end u
 ECN/PFC/DCQCN code and readback exist, but switched-fabric validation requires a managed switch
 with ECN/PFC; a direct Mac↔Linux cable cannot substitute for it. Treat those offload settings as
 network policy, not a client-side default.
+
+## 12. llama.cpp / ggml-rpc inference: tuned RDMA configuration
+
+Reference integration: llama.cpp with the `ggml-rpc` RDMA transport (branch
+`llama-rpc-rdma`, `README-RDMA.md`). This is the working set that produces the stable RDMA
+win over TCP on a Mac Studio (Metal) ⇄ DGX Spark (CUDA), 40G RoCEv2.
+
+### 12.1 The tuned environment (Mac llama-server, RDMA transport)
+
+```sh
+export MELONDMA_DIRECT_UAR=1 MELONDMA_DIRECT_CQ=1 MELONDMA_BLUE_FLAME=1 MELONDMA_HW_CQ_EVENT=1
+export MELONDMA_COMPLETION_POLICY=latency
+export GGML_RPC_REQUIRE_RDMA=1
+export GGML_RPC_RDMA_KV_BATCH=1 GGML_RPC_RDMA_WRITE_KV=1 GGML_RPC_RDMA_ENABLE_BATCH=1
+export GGML_RPC_RDMA_KV_DEVICE=1          # zero-copy into Metal shared buffers
+export GGML_RPC_RDMA_DEST_ARENA_MAX=128   # 128 MiB per-client MR segment
+export GGML_RPC_RDMA_RX_DEPTH=24          # 24 x 256 KiB = 6 MiB pre-posted recv ring
+export GGML_RPC_RDMA_SIGNAL_INTERVAL=8
+export GGML_RPC_RDMA_WRITE_MR_CACHE=1
+export GGML_RPC_RDMA_STATS=1              # opt-in: teardown counters + fallback verdict
+```
+
+### 12.2 Pitfalls that silently kill performance
+
+1. **`GGML_CUDA_PINNED_HOST=1` halves Spark prefill (~2.2x).** Measured 331 vs 727 tok/s on
+   qwen3.8-27b disagg @8k. Pinned host lets `ibv_reg_mr` pin the KV and RDMA-WRITE straight
+   from it (zero-copy source), but the KV then lives in a region the GPU reads much slower.
+   Keep it **unset**; the D2H copy into the registered TX ring is pipelined under the NIC
+   DMA and costs only ~13% of the handoff.
+2. **Every rebuild strips the DriverKit entitlements.** Without
+   `com.apple.developer.driverkit.userclient-access` the RDMA probe fails
+   ("no matching device/GID") and the runner silently falls back to TCP. Re-sign after
+   every `cmake --build` (`sign-rdma-runtime.sh`).
+3. **TCP40 and RDMA are mutually exclusive** — same ConnectX card. TCP40 requires Apple's
+   Ethernet driver, RDMA requires MelonDMA; you cannot A/B them in one session. TCP10
+   (onboard 10GbE) runs alongside either.
+
+### 12.3 What produced the win (in order of impact)
+
+1. **Drop `GGML_CUDA_PINNED_HOST`** — 2.2x prefill, all modes/transports.
+2. **KV pipeline** — chunk the KV snapshot into <=128 MiB arenas and register the next arena
+   while the previous one transfers. Handoff 668 -> 462 ms @32k (-31%), now at ~20 Gbit/s
+   line rate.
+3. **`GGML_RPC_RDMA_KV_DEVICE=1`** — RDMA-WRITE the KV directly into `MTLStorageModeShared`
+   Metal buffers, skipping the host arena and the `set(local)` copy: handoff -12..-35%,
+   decode +1..+3%.
+4. **MTP gate** — self-speculative drafting pays off in split only:
+   `LLAMA_SPEC_TYPE=draft-mtp` for split, `LLAMA_SPEC_MAX_PAST=16384` (the draft replay cost
+   outweighs the decode gain beyond ~16-32k), off in disagg (post-handoff draft replay adds
+   ~5% TTFT for a decode gain within noise).
+
+### 12.4 Measured result (fresh matched sweep, no-MTP)
+
+`qwen3.8-27b-mtp-km`, disagg — prefill tok/s / decode tok/s, RDMA vs TCP10:
+
+| ctx | RDMA prefill | TCP10 prefill | RDMA decode | TCP10 decode |
+|---|---|---|---|---|
+| 512 | 595 | 528 | 27.3 | 26.3 |
+| 8192 | 716 | 707 | 22.1 | 21.4 |
+| 32768 | 654 | 647 | 12.8 | 12.9 |
+| 65536 | 575 | 573 | 8.4 | 8.5 |
+
+Split (layer 55/45): RDMA decode +5..+7% (per-step activation exchange on the ~6 us
+direct-UAR path), prefill parity. Driver verdict on every run: `fallback_*=0`,
+`kernel_post/poll=0` via `GGML_RDMA_TELEMETRY`.
+
+### 12.5 Measurement methodology
+
+- 7 log-spaced contexts: 512, 1024, 2048, 8192, 16384, 32768, 65536 (skip 131072/262144 —
+  the win is flat there and prefill costs minutes per point).
+- 3 reps <=8k, 1 rep >=16k; unique prompt salt per rep (cold prefill, no KV-cache hits).
+- Verify the direct path each session: `GGML_RPC_RDMA_STATS=1` -> `GGML_RDMA_TELEMETRY` must
+  show `fallback_*=0` and `kernel_post/poll=0`.
+
+### 12.6 Attempted and rejected (do not re-try)
+
+**Async KV WRITE overlap ("hide the handoff under prefill").** The transport's 2-window
+staging (2 x 8 x 256 KiB) forces a generation-reuse drain after every two windows, so posting
+without the final drain is a no-op (`wait_ms` stays ~39 ms). On the device-direct path it is
+unsafe — the 8 MiB persistent TX ring is overwritten while async windows still DMA. The real
+fix (per-arena staging ~128 MiB) would hide ~1% TTFT at 8-64k and 0% at 512 (single prefill
+chunk) — not worth the MR quota, pin budget and risk.

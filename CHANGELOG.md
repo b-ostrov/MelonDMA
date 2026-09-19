@@ -7,6 +7,74 @@ original notes. Numbers are measured on one bench: Mac Studio M2 Ultra + Connect
 `15b3:1015` (PCIe Gen3 x4 over Thunderbolt, ~31.5 Gbit/s/direction ceiling) ⇄ NVIDIA DGX Spark
 (ConnectX-7, rdma-core 50.0), RoCEv2, MTU 4096.
 
+## 2026-09-19 — v0.7.0: device identity, rdma-core device attributes, MRRS control, mcdma-dsv41 backend
+
+**QUERY_DEVICE reported part 0 and firmware 0; fixed.** `ibv_query_device` returned
+`vendor_part_id=0` and `fw_ver=0`. The shim and `verbs_compat` copied what the DEXT sent, and the
+DEXT sent zeros: `QueryHcaCaps()` cleared `MlxHcaCaps` with a `memset` and never set `fwRev`
+again, and the vendor block was filled only by `MlxHCAConnectX4::LoadCaps()`, which nothing
+calls. `QueryHcaCaps()` now reads the firmware version from the initialization segment (layout
+checked against the Spark's `mlx5_init_seg`: `fw_rev` minor high / major low, subminor in
+`cmdif_rev_fw_sub`), encodes it as mlx5_ib does (`major << 32 | minor << 16 | subminor`,
+`MlxHcaCaps::fwRev` widened to 64 bits), and fills vendor `0x15b3`, the PCI device id and the
+revision byte. After an FLR the same function re-reads them. One log line:
+`QUERY_HCA_CAP: fw X.Y.Z device 0x1015 rev ..`. Readback on the live card: part `0x1015`,
+firmware `14.22.1002`. The client that exposed it was MCDMA's `verbs_peer`, which refuses a
+device whose part it does not recognise.
+
+**`ibv_device_attr` now follows rdma-core — ABI change.** Names, types and order match
+rdma-core 50.0 (checked on the Spark): `fw_ver` is the `char[64]` string `"14.22.1002"`, formatted
+like rdma-core's mlx5 provider; `max_mr_size` is 64-bit and reports the client's pin limit
+(512 MiB) instead of the max message size truncated to `int`; the missing fields exist and carry
+what the driver can honour — `device_cap_flags` (SYS_IMAGE_GUID, RC_RNR_NAK_GEN, PORT_ACTIVE_EVENT
+from the ABI, MEM_WINDOW when MWs exist: `0x21c00` live), `atomic_cap` (`IBV_ATOMIC_HCA` from the
+ABI), `max_mw`/`max_ah` from the driver limits (128/8), `max_srq_wr` 4096 and `max_srq_sge` 3 from
+MlxSRQ, `max_pkeys` 1, `local_ca_ack_delay` 16. `max_srq` has no separate count in the driver and
+reports the QP limit as an upper bound. `max_sge_qp` and `max_inline_data` stay, after the
+rdma-core fields. The struct changed size: every client that calls `ibv_query_device` must be
+rebuilt with this `libibverbs.dylib` (muser's `melon_rdma_bulk.c`, MCDMA's `verbs_peer` and
+`mcdma_bw`); llama.cpp does not call it. A client written for Linux that prints `fw_ver` or reads
+`device_cap_flags` now compiles unchanged.
+
+**PCIe Device Control readback and MRRS control.** New diagnostic UserClient method
+`kMlxUCMethodPcieDevCtl` (0x10be, diagnostic entitlement only, since it changes the device for
+every client) reads Device Capabilities/Control and sets the Max Read Request Size field (bits
+14:12, 128-4096); payload size is never written. The override is re-applied after every FLR,
+because `IOPCIDevice::Reset` restores the saved register; `restore` returns to the value found
+at start. Tool: `build/mlx_mrrs [BYTES|restore]`. Live readback: `devctl=0x291f` — MRRS 512,
+MPS 128 (512 supported), extended tags, relaxed-ordering enable set. No memory key requests
+relaxed ordering, so the card's writes still land in order.
+
+**MRRS is not the out-of-Mac limit — closed.** MCDMA's 4 MiB, QD1, MTU 4096 recipe, 3 rounds per
+value, all trials byte-checked. Out of the Mac at MRRS 512/1024/2048/4096: Mac WRITE
+21.17/21.20/21.07/21.32, Spark READ 21.21/21.24/21.11/21.36 Gbit/s; into the Mac 23.02 (Mac READ)
+and 23.13 (Spark WRITE) at every value; 4 KiB latency unchanged. Non-monotonic and under 1%.
+Both directions sit at what Thunderbolt 3 PCIe tunnels deliver; goodput on this bench has no
+software lever left.
+
+**MCDMA's own benchmarks on MelonDMA.** `peer/verbs_peer.c` and `benchmarks/mcdma_bw.c` from
+ashhart/MCDMA, built against this `libibverbs` (the only source change: the owned-GID fallback
+and, before the identity fix, the part check), run with MCDMA's recipe so the numbers sit next
+to its published table. 4 KiB, QD1, path MTU 1024, pooled 3 x 1,000, median/p95 µs: Mac WRITE
+8.417/9.125, Mac READ 6.834/7.125, Spark WRITE 3.904/4.048, Spark READ 6.608/6.736 (MCDMA 0.1.17
+on TB5 + CX-5 Ex, with its GPU keepalive: 7.625/14.0, 6.042/10.708, 3.680/4.32, 5.536/6.304).
+4 MiB sustained: 23.0/23.1 Gbit/s into the Mac, 21.2/21.2 out (MCDMA: 50.5/51.0 and 29.4/24.2 on
+a Gen4 x4 tunnel). Spark-initiated cells and all bandwidth compare hardware; only Mac-initiated
+latency reflects this driver, where the post path costs about 0.5 µs more than a Linux post.
+MCDMA's Metal keepalive does nothing on this bench: Mac cells moved within run-to-run spread and
+Spark READ got 0.4 µs slower with the GPU busy.
+
+**mcdma-dsv41 runs on MelonDMA.** ashhart/mcdma-dsv41 (DeepSeek V4.1 split across a Mac and DGX
+Sparks) moves every Mac-Spark byte through one daemon, `v41rpcd`; its Mac side now builds against
+this driver (`make MELONDMA=... sign`, per-peer `ibv_mlx5_configure_roce`, owned-GID fallback).
+On this bench: 64 B mailbox round trip 13-14 µs; decode-sized call (30 KiB / 20 KiB) 35 µs; a
+prefill-chunk expert call (29.5 MB / 58.7 MB) 32.0 ms at the wire rate (21.4 / 23.1 Gbit/s);
+real DeepSeek V4.1 layer-3 experts on the Spark answered 1,800 one- and six-token calls with
+replies byte-identical to TCP (0.79 vs 1.55-2.07 ms per one-token call, of which the Spark's
+kernels take 0.68). `scripts/mac.sh daemon/status/stop` with `V41_VERBS=melondma` pass.
+
+Released as **v0.7.0** (DEXT 0.550).
+
 ## 2026-09-09 — UC QP, SEND_WITH_INV and repeatable rebuild gate
 
 **UC QP implemented.** The stable UserClient ABI, `librdma_shim` and the

@@ -937,7 +937,12 @@ int ibv_query_device(struct ibv_context *context,
     struct rdma_device_attr source = {0};
     if (rdma_query_device(context->dev, &source) != 0) return EIO;
     memset(attr, 0, sizeof(*attr));
-    attr->fw_ver = source.fw_version;
+    /* The driver encodes the version the way mlx5_ib does (major << 32 |
+     * minor << 16 | subminor) and rdma-core's mlx5 provider prints it so. */
+    snprintf(attr->fw_ver, sizeof(attr->fw_ver), "%u.%u.%04u",
+             (unsigned)((source.fw_version >> 32) & 0xffff),
+             (unsigned)((source.fw_version >> 16) & 0xffff),
+             (unsigned)(source.fw_version & 0xffff));
     attr->vendor_id = 0x15b3;
     attr->vendor_part_id = source.device_id;
     attr->max_qp = source.max_qp > INT_MAX ? INT_MAX : (int)source.max_qp;
@@ -945,21 +950,45 @@ int ibv_query_device(struct ibv_context *context,
     attr->max_mr = source.max_mr > INT_MAX ? INT_MAX : (int)source.max_mr;
     attr->max_pd = attr->max_qp;
     struct rdma_abi_attr abi = {};
-    int multi_sge = rdma_query_abi(context->dev, &abi) == 0 &&
-                    (abi.features & RDMA_FEATURE_MULTI_SGE);
+    int have_abi = rdma_query_abi(context->dev, &abi) == 0;
+    int multi_sge = have_abi && (abi.features & RDMA_FEATURE_MULTI_SGE);
     attr->max_sge = multi_sge ? RDMA_MAX_SGE : 1;
     attr->max_sge_rd = attr->max_sge;
     attr->max_sge_qp = attr->max_sge;
     attr->max_qp_wr = 32768;
     attr->max_cqe = 2048;
-    attr->max_mr_size = source.max_msg_size > INT_MAX ?
-        INT_MAX : (int)source.max_msg_size;
+    /* The largest single registration is what this client may pin; this
+     * used to report the max message size, truncated to int. */
+    struct rdma_runtime_status runtime = {0};
+    attr->max_mr_size = rdma_query_runtime(context->dev, &runtime) == 0 &&
+                        runtime.client_pinned_limit ?
+                        runtime.client_pinned_limit : UINT64_MAX;
     attr->max_inline_data = source.max_inline_data > INT_MAX ?
         INT_MAX : (int)source.max_inline_data;
     attr->max_qp_rd_atom = source.max_qp_rd_atom > INT_MAX ?
         INT_MAX : (int)source.max_qp_rd_atom;
     attr->max_qp_init_rd_atom = source.max_qp_init_rd_atom > INT_MAX ?
         INT_MAX : (int)source.max_qp_init_rd_atom;
+    attr->max_res_rd_atom = attr->max_qp * attr->max_qp_init_rd_atom;
+    attr->atomic_cap = have_abi && (abi.features & RDMA_FEATURE_ATOMIC) ?
+                       IBV_ATOMIC_HCA : IBV_ATOMIC_NONE;
+    struct rdma_limits limits = {0};
+    if (rdma_query_limits(context->dev, &limits) == 0) {
+        attr->max_mw = limits.max_mw > INT_MAX ? INT_MAX : (int)limits.max_mw;
+        attr->max_ah = limits.max_ah > INT_MAX ? INT_MAX : (int)limits.max_ah;
+    }
+    /* SRQ bounds are the driver's (MlxSRQ: 1..4096 WRs, MLX_SRQ_MAX_SGE); it
+     * keeps no separate SRQ count, so the QP limit stands in for it. */
+    attr->max_srq = attr->max_qp;
+    attr->max_srq_wr = 4096;
+    attr->max_srq_sge = 3;
+    attr->max_pkeys = 1;               /* RoCE: the default P_Key only */
+    attr->local_ca_ack_delay = 16;     /* what mlx5 reports */
+    attr->device_cap_flags = IBV_DEVICE_SYS_IMAGE_GUID |
+                             IBV_DEVICE_RC_RNR_NAK_GEN |
+                             (attr->max_mw ? IBV_DEVICE_MEM_WINDOW : 0) |
+                             (have_abi && (abi.features & RDMA_FEATURE_ASYNC_EVENTS) ?
+                              IBV_DEVICE_PORT_ACTIVE_EVENT : 0);
     attr->page_size_cap = 4096;
     attr->phys_port_cnt = source.num_ports > UINT8_MAX ?
         UINT8_MAX : (uint8_t)source.num_ports;

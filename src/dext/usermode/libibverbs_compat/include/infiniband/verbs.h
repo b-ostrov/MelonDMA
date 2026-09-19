@@ -272,34 +272,92 @@ struct ibv_async_event {
             uint8_t port_num; } element;
 };
 
+enum ibv_device_cap_flags {
+    IBV_DEVICE_RESIZE_MAX_WR        = 1,
+    IBV_DEVICE_BAD_PKEY_CNTR        = 1 <<  1,
+    IBV_DEVICE_BAD_QKEY_CNTR        = 1 <<  2,
+    IBV_DEVICE_RAW_MULTI            = 1 <<  3,
+    IBV_DEVICE_AUTO_PATH_MIG        = 1 <<  4,
+    IBV_DEVICE_CHANGE_PHY_PORT      = 1 <<  5,
+    IBV_DEVICE_UD_AV_PORT_ENFORCE   = 1 <<  6,
+    IBV_DEVICE_CURR_QP_STATE_MOD    = 1 <<  7,
+    IBV_DEVICE_SHUTDOWN_PORT        = 1 <<  8,
+    IBV_DEVICE_INIT_TYPE            = 1 <<  9,
+    IBV_DEVICE_PORT_ACTIVE_EVENT    = 1 << 10,
+    IBV_DEVICE_SYS_IMAGE_GUID       = 1 << 11,
+    IBV_DEVICE_RC_RNR_NAK_GEN       = 1 << 12,
+    IBV_DEVICE_SRQ_RESIZE           = 1 << 13,
+    IBV_DEVICE_N_NOTIFY_CQ          = 1 << 14,
+    IBV_DEVICE_MEM_WINDOW           = 1 << 17,
+    IBV_DEVICE_UD_IP_CSUM           = 1 << 18,
+    IBV_DEVICE_XRC                  = 1 << 20,
+    IBV_DEVICE_MEM_MGT_EXTENSIONS   = 1 << 21,
+    IBV_DEVICE_MEM_WINDOW_TYPE_2A   = 1 << 23,
+    IBV_DEVICE_MEM_WINDOW_TYPE_2B   = 1 << 24,
+    IBV_DEVICE_RC_IP_CSUM           = 1 << 25,
+    IBV_DEVICE_RAW_IP_CSUM          = 1 << 26,
+    IBV_DEVICE_MANAGED_FLOW_STEERING = 1 << 29
+};
+
+enum ibv_atomic_cap {
+    IBV_ATOMIC_NONE,
+    IBV_ATOMIC_HCA,
+    IBV_ATOMIC_GLOB
+};
+
+/* rdma-core's fields, names, types and order (checked against rdma-core 50.0
+ * on the Spark), so a client written for Linux compiles unchanged: fw_ver is
+ * the "major.minor.subminor" string, not a number, and max_mr_size is 64-bit.
+ * Our two extensions come after the rdma-core fields. Changing this struct
+ * changes its size: every client that calls ibv_query_device has to be
+ * rebuilt against this header together with libibverbs.dylib. */
 struct ibv_device_attr {
-    uint64_t fw_ver;
-    uint64_t page_size_cap;
-    uint32_t vendor_id;
-    uint32_t vendor_part_id;
-    uint32_t hw_ver;
-    int max_qp;
-    int max_cq;
-    int max_mr;
-    int max_pd;
-    int max_sge;
-    int max_sge_rd;
-    int max_qp_wr;
-    int max_sge_qp;
-    int max_cqe;
-    int max_mr_size;
-    int max_inline_data;   /* MelonDMA extension: inline SEND payload cap */
-    int max_qp_rd_atom;
-    int max_ee_rd_atom;
-    int max_res_rd_atom;
-    int max_qp_init_rd_atom;
-    int max_ee_init_rd_atom;
-    uint8_t phys_port_cnt;
+    char fw_ver[64];
     /* Identity, as rdma-core spells it: big-endian on the wire, so a consumer
      * that prints or compares one gets the same bytes it would from a Linux
      * host. Zero when firmware supplied none. */
     uint64_t node_guid;
     uint64_t sys_image_guid;
+    uint64_t max_mr_size;
+    uint64_t page_size_cap;
+    uint32_t vendor_id;
+    uint32_t vendor_part_id;
+    uint32_t hw_ver;
+    int max_qp;
+    int max_qp_wr;
+    unsigned int device_cap_flags;
+    int max_sge;
+    int max_sge_rd;
+    int max_cq;
+    int max_cqe;
+    int max_mr;
+    int max_pd;
+    int max_qp_rd_atom;
+    int max_ee_rd_atom;
+    int max_res_rd_atom;
+    int max_qp_init_rd_atom;
+    int max_ee_init_rd_atom;
+    enum ibv_atomic_cap atomic_cap;
+    int max_ee;
+    int max_rdd;
+    int max_mw;
+    int max_raw_ipv6_qp;
+    int max_raw_ethy_qp;
+    int max_mcast_grp;
+    int max_mcast_qp_attach;
+    int max_total_mcast_qp_attach;
+    int max_ah;
+    int max_fmr;
+    int max_map_per_fmr;
+    int max_srq;
+    int max_srq_wr;
+    int max_srq_sge;
+    uint16_t max_pkeys;
+    uint8_t local_ca_ack_delay;
+    uint8_t phys_port_cnt;
+    /* MelonDMA extensions */
+    int max_sge_qp;
+    int max_inline_data;   /* inline SEND payload cap */
 };
 struct ibv_pd;
 struct ibv_cq;

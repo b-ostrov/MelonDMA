@@ -895,6 +895,33 @@ enum {
      * left RESET cannot be queried — which is exactly when the reason for a
      * refused transition is wanted. */
     kMlxUCMethodQpLastRefusal    = 0x10bd,
+    /* Reads the PCIe Device Capabilities/Control registers and, with
+     * MLX_PCIE_DEVCTL_SET_MRRS, sets the card's Max Read Request Size. The
+     * setting is kept and re-applied after every function reset. Diagnostic
+     * entitlement only: it changes the device for every client. */
+    kMlxUCMethodPcieDevCtl       = 0x10be,
+};
+
+/* kMlxUCMethodPcieDevCtl. MRRS decides how large a read the card may ask the
+ * host for in one request; the host answers in max-payload-sized completions
+ * either way. macOS programs 512 on this path. */
+enum {
+    MLX_PCIE_DEVCTL_READ     = 0,
+    MLX_PCIE_DEVCTL_SET_MRRS = 1,  /* mrrsBytes: 128..4096, power of two */
+    MLX_PCIE_DEVCTL_RESTORE  = 2,  /* back to what the driver found at start */
+};
+
+struct mlx_pcie_devctl_req {
+    uint32_t op;           /* MLX_PCIE_DEVCTL_* */
+    uint32_t mrrsBytes;    /* SET_MRRS only */
+    /* filled on return, for every op */
+    uint32_t devCap;       /* Device Capabilities (cap + 0x04) */
+    uint16_t devCtl;       /* Device Control after the op (cap + 0x08) */
+    uint16_t devCtlAtStart;
+    uint32_t mrrsNow;      /* bytes, decoded from devCtl */
+    uint32_t mpsNow;       /* max payload, bytes, decoded from devCtl */
+    uint32_t mpsSupported; /* bytes, decoded from devCap */
+    uint32_t mrrsOverride; /* bytes the driver re-applies after a reset, 0 = none */
 };
 
 /* kMlxUCMethodProbeRmpLayout.

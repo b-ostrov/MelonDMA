@@ -75,6 +75,7 @@ static inline void rdma_mmio_flush(void)
 #endif
 }
 
+
 /* ---- internal object layouts ---- */
 
 /* One blue-flame register, as the hardware sees it. The toggle belongs here
